@@ -5,21 +5,28 @@ const teamMembers = [
     name: "Aayush",
     role: "Gaming Master",
     bio: "Expert game developer with exceptional skills in creating immersive and challenging game experiences.",
-    imageUrl: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=1000&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&h=1100&q=80",
     color: "text-blue-500"
   },
   {
     name: "Tushar",
-    role: "Backend Developer",
-    bio: "Specialized in creating robust backend systems that power high-performance gaming platforms.",
-    imageUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=1000&q=80",
-    color: "text-primary"
+        role: "Backend Developer",
+        bio: "Specialized in creating robust backend systems that power high-performance gaming platforms.",
+        imageUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=1000&q=80",
+        color: "text-primary"
   },
   {
     name: "Sammy",
     role: "ML Engineer",
     bio: "Implements cutting-edge machine learning solutions to enhance gameplay and create adaptive gaming experiences.",
-    imageUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=1000&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&h=1100&q=80",
+    color: "text-accent"
+  },
+  {
+    name: "Vivel",
+    role: "AI Engineer",
+    bio: "Designs intelligent systems that bring games to life with adaptive AI behaviors and realistic NPC interactions.",
+    imageUrl: "https://images.unsplash.com/photo-1542190891-2093d38760f2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&h=1100&q=80",
     color: "text-accent"
   }
 ];
@@ -50,11 +57,11 @@ export default function TeamSection() {
           Meet The Team
         </motion.h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div className="flex flex-nowrap overflow-x-auto pb-6 gap-6 px-2 -mx-2">
           {teamMembers.map((member, index) => (
             <motion.div 
               key={member.name}
-              className="team-card relative rounded-xl overflow-hidden group"
+              className="team-card relative rounded-xl overflow-hidden group min-w-[300px] flex-shrink-0"
               variants={teamCardVariants}
               initial="hidden"
               whileInView="visible"

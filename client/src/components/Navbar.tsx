@@ -12,47 +12,36 @@ export function Navbar({ isGamesPage = false, onBackToHome }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [location] = useLocation();
   
-  // Track scroll position to change navbar style
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      setScrolled(window.scrollY > 50);
     };
     
     window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  // Handle smooth scrolling to sections
   const scrollToSection = (sectionId: string) => {
-    // Close mobile menu if open
     setIsMobileMenuOpen(false);
     
-    // If not on home page, navigate there first
     if (location !== '/') {
-      window.location.href = `/${sectionId}`;
+      window.location.href = `/#${sectionId}`;
       return;
     }
     
     const section = document.getElementById(sectionId);
     if (section) {
       window.scrollTo({
-        top: section.offsetTop - 100, // Offset for navbar
-        behavior: 'smooth',
+        top: section.offsetTop - 100,
+        behavior: 'smooth'
       });
+      // Update URL without triggering scroll
+      window.history.pushState(null, '', `/#${sectionId}`);
     }
   };
   
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   
-  // Navbar button animation variants
   const navItemVariants = {
     hidden: { opacity: 0, y: -10 },
     visible: (i: number) => ({ 
@@ -77,7 +66,14 @@ export function Navbar({ isGamesPage = false, onBackToHome }: NavbarProps) {
       }
     }
   };
-  
+
+  const navItems = [
+    { text: "Home", path: "/", id: "" },
+    { text: "Features", path: "/#features", id: "features" },
+    { text: "Games", path: "/games", id: "" },
+    { text: "Team", path: "/#team", id: "team" },
+  ];
+
   return (
     <motion.nav 
       className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-md transition-all duration-300 ${
@@ -126,12 +122,7 @@ export function Navbar({ isGamesPage = false, onBackToHome }: NavbarProps) {
         </motion.div>
         
         <div className="hidden md:flex space-x-8 items-center font-['Rajdhani']">
-          {[
-            { text: "Home", path: "/", id: "" },
-            { text: "Features", path: "/#features", id: "features" },
-            { text: "Games", path: "/games", id: "" },
-            { text: "Team", path: "/#team", id: "team" },
-          ].map((item, index) => (
+          {navItems.map((item, index) => (
             <motion.div
               key={item.text}
               className="relative"
@@ -173,19 +164,21 @@ export function Navbar({ isGamesPage = false, onBackToHome }: NavbarProps) {
             animate="visible"
             custom={4}
           >
-            <motion.button 
-              className="text-white bg-[#B026FF] bg-opacity-20 hover:bg-opacity-40 px-5 py-2 rounded-md transition-colors duration-300 border border-[#B026FF] relative overflow-hidden group"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span className="relative z-10">Play Now</span>
-              <motion.div 
-                className="absolute inset-0 bg-[#B026FF]"
-                initial={{ x: "-100%" }}
-                whileHover={{ x: 0 }}
-                transition={{ duration: 0.3 }}
-              />
-            </motion.button>
+            <Link href="/games">
+              <motion.button 
+                className="text-white bg-[#B026FF] bg-opacity-20 hover:bg-opacity-40 px-5 py-2 rounded-md transition-colors duration-300 border border-[#B026FF] relative overflow-hidden group"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span className="relative z-10">Play Now</span>
+                <motion.div 
+                  className="absolute inset-0 bg-[#B026FF]"
+                  initial={{ x: "-100%" }}
+                  whileHover={{ x: 0 }}
+                  transition={{ duration: 0.3 }}
+                />
+              </motion.button>
+            </Link>
           </motion.div>
         </div>
         
@@ -213,7 +206,6 @@ export function Navbar({ isGamesPage = false, onBackToHome }: NavbarProps) {
         </div>
       </div>
       
-      {/* Mobile menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div 
@@ -224,27 +216,25 @@ export function Navbar({ isGamesPage = false, onBackToHome }: NavbarProps) {
             transition={{ duration: 0.3 }}
           >
             <div className="flex flex-col px-4 pt-2 pb-4 space-y-3 font-['Rajdhani']">
-              <Link href="/" className="text-white hover:text-[#B026FF] py-2 transition-colors duration-300">
-                Home
-              </Link>
-              
-              <button 
-                onClick={() => scrollToSection('features')} 
-                className="text-white hover:text-[#B026FF] py-2 transition-colors duration-300 text-left"
-              >
-                Features
-              </button>
-              
-              <Link href="/games" className="text-white hover:text-[#B026FF] py-2 transition-colors duration-300">
-                Games
-              </Link>
-              
-              <button 
-                onClick={() => scrollToSection('team')} 
-                className="text-white hover:text-[#B026FF] py-2 transition-colors duration-300 text-left"
-              >
-                Team
-              </button>
+              {navItems.map((item) => (
+                item.id ? (
+                  <button 
+                    key={item.text}
+                    onClick={() => scrollToSection(item.id)} 
+                    className="text-white hover:text-[#B026FF] py-2 transition-colors duration-300 text-left"
+                  >
+                    {item.text}
+                  </button>
+                ) : (
+                  <Link 
+                    key={item.text}
+                    href={item.path}
+                    className="text-white hover:text-[#B026FF] py-2 transition-colors duration-300"
+                  >
+                    {item.text}
+                  </Link>
+                )
+              ))}
               
               <Link 
                 href="/games" 
