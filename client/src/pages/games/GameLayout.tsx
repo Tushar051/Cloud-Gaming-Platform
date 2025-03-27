@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { motion } from 'framer-motion';
 import Snake from './Snake';
+import SubwayRunner from './SubwayRunner';
+import PixelRacer from './PixelRacer';
+import MazeMuncher from './MazeMuncher';
+import SpaceInvaders from './SpaceInvaders';
+import FlappyBird from './FlappyBird';
+import Tetris from './Tetris';
+import Game2048 from './Game2048';
 
 // GameLayout handles the routing for individual games
 export default function GameLayout() {
@@ -40,10 +47,15 @@ export default function GameLayout() {
     };
   }, []);
 
+  // Format game title
+  const formatGameTitle = (id: string) => {
+    return id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
   // Render the appropriate game based on the URL
   const renderGame = () => {
     // Game playable component for games that aren't fully implemented yet
-    const GamePlayable = ({ title, gameId }: { title: string; gameId: string }) => (
+    const GamePlayable = ({ title }: { title: string }) => (
       <div className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-gray-900 to-black p-8">
         <h2 className="text-3xl font-bold text-primary mb-6">{title}</h2>
         <div className="bg-black/50 p-6 rounded-lg border border-primary/30 shadow-lg max-w-2xl w-full mb-8">
@@ -67,19 +79,28 @@ export default function GameLayout() {
       </div>
     );
     
-    // Return game based on ID - Snake is the only fully implemented game
+    // Return game based on ID
     switch (gameId) {
-      case 'subway-runner':
-      case 'pixel-racer':
-      case 'maze-muncher':
-      case 'space-invaders':
-      case 'flappy-bird':
-      case 'tetris':
-      case '2048':
-        return <GamePlayable title={gameId.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} gameId={gameId} />;
-        
       case 'snake':
         return <Snake isMuted={isMuted} />;
+      case 'subway-runner':
+        return <SubwayRunner isMuted={isMuted} />;
+      case 'pixel-racer':
+        return <PixelRacer isMuted={isMuted} />;
+      case 'maze-muncher':
+        return <MazeMuncher isMuted={isMuted} />;
+      case 'space-invaders':
+        return <SpaceInvaders isMuted={isMuted} />;
+      case 'flappy-bird':
+        return <FlappyBird isMuted={isMuted} />;
+      case 'tetris':
+        return <Tetris isMuted={isMuted} />;
+      case '2048':
+        return <Game2048 isMuted={isMuted} />;
+        
+      // Add more cases for other games as you implement them
+      // case 'new-game':
+      //   return <NewGame isMuted={isMuted} />;
         
       default:
         return (
@@ -113,7 +134,7 @@ export default function GameLayout() {
           </motion.button>
         </Link>
         <div className="font-rajdhani font-bold text-xl text-white">
-          {gameId.split('-').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+          {formatGameTitle(gameId)}
         </div>
         <div className="flex gap-4">
           <motion.button
