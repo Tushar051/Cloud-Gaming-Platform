@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Rocket, Alien, Heart, Trophy } from 'lucide-react';
+import { Shield, Rocket, Heart, Trophy, Target } from 'lucide-react';
 
 // Enhanced game configuration
 const GAME_CONFIG = {
@@ -285,17 +285,17 @@ export default function SpaceInvaders({ isMuted }: { isMuted: boolean }) {
       ))}
       
       {/* Power-ups */}
-      {powerUps.map((powerUp, i) => (
-        <div
-          key={i}
-          className="absolute w-6 h-6 transform -translate-x-1/2 -translate-y-1/2"
-          style={{ left: `${powerUp.x}%`, top: `${powerUp.y}%` }}
-        >
-          {powerUp.type === 'shield' && <Shield className="text-blue-500" />}
-          {powerUp.type === 'multishot' && <Rocket className="text-green-500" />}
-          {powerUp.type === 'rapid-fire' && <Alien className="text-purple-500" />}
-        </div>
-      ))}
+{powerUps.map((powerUp, i) => (
+  <div
+    key={i}
+    className="absolute w-6 h-6 transform -translate-x-1/2 -translate-y-1/2"
+    style={{ left: `${powerUp.x}%`, top: `${powerUp.y}%` }}
+  >
+    {powerUp.type === 'shield' && <Shield className="text-blue-500" />}
+    {powerUp.type === 'multishot' && <Rocket className="text-green-500" />}
+    {powerUp.type === 'rapid-fire' && <Target className="text-purple-500" />}
+  </div>
+))}
       
       {/* Game over screen */}
       {gameOver && (
