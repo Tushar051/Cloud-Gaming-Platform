@@ -1,16 +1,29 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { RefreshCw, Volume2, VolumeX } from 'lucide-react';
 
 const BOARD_SIZE = 4;
 
-export default function Game2048({ isMuted }: { isMuted: boolean }) {
+export default function Game2048() {
+  // Game state
   const [board, setBoard] = useState<number[][]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
+  const [bestScore, setBestScore] = useState(0);
   const [won, setWon] = useState(false);
+  
+  // Sound and UI state
+  const [isMuted, setIsMuted] = useState(false);
+  const moveSoundRef = useRef<HTMLAudioElement>(null);
+  const mergeSoundRef = useRef<HTMLAudioElement>(null);
+  const winSoundRef = useRef<HTMLAudioElement>(null);
 
-  // Initialize board
+  // Initialize board and load best score
   useEffect(() => {
+    const savedBestScore = localStorage.getItem('2048-best-score');
+    if (savedBestScore) {
+      setBestScore(parseInt(savedBestScore, 10));
+    }
     startNewGame();
   }, []);
 
@@ -57,7 +70,20 @@ export default function Game2048({ isMuted }: { isMuted: boolean }) {
           if (newLine[i] === newLine[i + 1]) {
             newLine[i] *= 2;
             localScore += newLine[i];
-            if (newLine[i] === 2048) setWon(true);
+            // Play merge sound
+            if (!isMuted && mergeSoundRef.current) {
+              mergeSoundRef.current.currentTime = 0;
+              mergeSoundRef.current.play();
+            }
+
+            if (newLine[i] === 2048) {
+              // Play win sound
+              if (!isMuted && winSoundRef.current) {
+                winSoundRef.current.currentTime = 0;
+                winSoundRef.current.play();
+              }
+              setWon(true);
+            }
             newLine[i + 1] = 0;
           }
         }
@@ -69,6 +95,8 @@ export default function Game2048({ isMuted }: { isMuted: boolean }) {
         
         return newLine;
       };
+
+      let newLocalScore = localScore;
 
       if (direction === 'left') {
         for (let y = 0; y < BOARD_SIZE; y++) {
@@ -109,8 +137,21 @@ export default function Game2048({ isMuted }: { isMuted: boolean }) {
       }
 
       if (moved) {
+        // Play move sound
+        if (!isMuted && moveSoundRef.current) {
+          moveSoundRef.current.currentTime = 0;
+          moveSoundRef.current.play();
+        }
+
         addRandomTile(newBoard);
-        setScore(prev => prev + localScore);
+        const newScore = score + newLocalScore;
+        setScore(newScore);
+        
+        // Update best score
+        if (newScore > bestScore) {
+          setBestScore(newScore);
+          localStorage.setItem('2048-best-score', newScore.toString());
+        }
         
         // Check if game over
         let hasMoves = false;
@@ -126,7 +167,48 @@ export default function Game2048({ isMuted }: { isMuted: boolean }) {
 
       return newBoard;
     });
-  }, [gameOver]);
+  }, [gameOver, score, bestScore, isMuted]);
+
+  // Touch support for mobile
+  const handleTouchStart = useRef({
+    x: 0,
+    y: 0,
+    handleTouchMove: (e: TouchEvent) => {},
+    handleTouchEnd: (e: TouchEvent) => {}
+  });
+
+  useEffect(() => {
+    const touchStart = (e: TouchEvent) => {
+      handleTouchStart.current.x = e.touches[0].clientX;
+      handleTouchStart.current.y = e.touches[0].clientY;
+    };
+
+    const touchMove = (e: TouchEvent) => {
+      const deltaX = e.touches[0].clientX - handleTouchStart.current.x;
+      const deltaY = e.touches[0].clientY - handleTouchStart.current.y;
+
+      const absDeltaX = Math.abs(deltaX);
+      const absDeltaY = Math.abs(deltaY);
+
+      if (absDeltaX > absDeltaY) {
+        // Horizontal movement
+        if (deltaX > 50) moveTiles('right');
+        else if (deltaX < -50) moveTiles('left');
+      } else {
+        // Vertical movement
+        if (deltaY > 50) moveTiles('down');
+        else if (deltaY < -50) moveTiles('up');
+      }
+    };
+
+    window.addEventListener('touchstart', touchStart);
+    window.addEventListener('touchmove', touchMove);
+
+    return () => {
+      window.removeEventListener('touchstart', touchStart);
+      window.removeEventListener('touchmove', touchMove);
+    };
+  }, [moveTiles]);
 
   // Handle keyboard input
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -155,49 +237,73 @@ export default function Game2048({ isMuted }: { isMuted: boolean }) {
 
   const getTileColor = (value: number) => {
     const colors = {
-      0: 'bg-gray-300',
-      2: 'bg-yellow-100',
-      4: 'bg-yellow-200',
-      8: 'bg-orange-200',
-      16: 'bg-orange-300',
-      32: 'bg-red-300',
-      64: 'bg-red-400',
-      128: 'bg-yellow-300',
-      256: 'bg-yellow-400',
-      512: 'bg-orange-400',
-      1024: 'bg-orange-500',
-      2048: 'bg-red-500',
-      4096: 'bg-red-600',
+      0: 'bg-gray-200',
+      2: 'bg-yellow-100 text-gray-800',
+      4: 'bg-yellow-200 text-gray-800',
+      8: 'bg-orange-200 text-white',
+      16: 'bg-orange-300 text-white',
+      32: 'bg-red-300 text-white',
+      64: 'bg-red-400 text-white',
+      128: 'bg-yellow-300 text-white',
+      256: 'bg-yellow-400 text-white',
+      512: 'bg-orange-400 text-white',
+      1024: 'bg-orange-500 text-white',
+      2048: 'bg-red-500 text-white',
+      4096: 'bg-red-600 text-white',
     };
-    return colors[value as keyof typeof colors] || 'bg-black';
+    return colors[value as keyof typeof colors] || 'bg-black text-white';
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full bg-gray-100">
-      <div className="flex justify-between w-64 mb-4">
-        <div className="text-2xl font-bold text-gray-800">Score: {score}</div>
-        <motion.button
-          className="bg-gray-800 text-white px-4 py-1 rounded"
-          onClick={startNewGame}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          New Game
-        </motion.button>
+    <div className="flex flex-col items-center justify-center w-full h-full bg-gray-100 touch-none select-none">
+      {/* Sound Effects */}
+      <audio ref={moveSoundRef} src="/move.mp3" />
+      <audio ref={mergeSoundRef} src="/merge.mp3" />
+      <audio ref={winSoundRef} src="/win.mp3" />
+      
+      {/* Top Controls */}
+      <div className="flex justify-between w-full max-w-md px-4 mb-4">
+        <div className="flex space-x-4">
+          <div className="text-lg font-bold text-gray-800">
+            Score: <span className="text-blue-600">{score}</span>
+          </div>
+          <div className="text-lg font-bold text-gray-800">
+            Best: <span className="text-green-600">{bestScore}</span>
+          </div>
+        </div>
+        
+        <div className="flex space-x-2">
+          <motion.button
+            className="bg-gray-800 text-white p-2 rounded"
+            onClick={startNewGame}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <RefreshCw size={20} />
+          </motion.button>
+          
+          <motion.button
+            className="bg-gray-800 text-white p-2 rounded"
+            onClick={() => setIsMuted(!isMuted)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+          </motion.button>
+        </div>
       </div>
       
+      {/* Game Board */}
       <div className="bg-gray-400 p-2 rounded-lg">
         <div className="grid grid-cols-4 gap-2">
           {board.map((row, y) => 
             row.map((cell, x) => (
               <div 
                 key={`${y}-${x}`} 
-                className={`w-16 h-16 flex items-center justify-center rounded-md ${getTileColor(cell)}`}
+                className={`w-20 h-20 flex items-center justify-center rounded-md transition-all duration-200 ease-in-out ${getTileColor(cell)}`}
               >
                 {cell !== 0 && (
-                  <span className={`text-xl font-bold ${
-                    cell <= 4 ? 'text-gray-800' : 'text-white'
-                  }`}>
+                  <span className={`text-2xl font-bold`}>
                     {cell}
                   </span>
                 )}
@@ -207,15 +313,16 @@ export default function Game2048({ isMuted }: { isMuted: boolean }) {
         </div>
       </div>
       
-      <div className="mt-4 text-gray-600">
-        Use arrow keys to move tiles
+      <div className="mt-4 text-gray-600 text-center">
+        Use arrow keys or swipe to move tiles
       </div>
       
       {/* Game over screen */}
       {gameOver && (
         <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center">
           <h2 className="text-4xl font-bold text-white mb-4">Game Over!</h2>
-          <p className="text-2xl text-white mb-6">Score: {score}</p>
+          <p className="text-2xl text-white mb-2">Score: {score}</p>
+          <p className="text-xl text-white mb-6">Best Score: {bestScore}</p>
           <motion.button
             className="bg-blue-500 text-white px-6 py-3 rounded-lg font-bold"
             onClick={startNewGame}
