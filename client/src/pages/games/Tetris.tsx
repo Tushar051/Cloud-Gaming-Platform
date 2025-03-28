@@ -25,7 +25,9 @@ const SHAPE_COLORS = [
 ];
 
 export default function Tetris({ isMuted }: { isMuted: boolean }) {
-  const [board, setBoard] = useState<number[][]>([]);
+  const [board, setBoard] = useState<number[][]>(() => 
+    Array(BOARD_HEIGHT).fill(0).map(() => Array(BOARD_WIDTH).fill(0))
+  );
   const [currentPiece, setCurrentPiece] = useState<{ shape: number[][]; x: number; y: number; color: string } | null>(null);
   const [nextPiece, setNextPiece] = useState<{ shape: number[][]; color: string } | null>(null);
   const [score, setScore] = useState(0);
@@ -35,6 +37,8 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
   const [highScore, setHighScore] = useState(() => {
     return parseInt(localStorage.getItem('tetrisHighScore') || '0');
   });
+
+  
 
   // Initialize board
   useEffect(() => {
