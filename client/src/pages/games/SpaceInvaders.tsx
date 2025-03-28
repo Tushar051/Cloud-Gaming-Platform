@@ -1,60 +1,148 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Shield, Rocket, Alien, Heart, Trophy } from 'lucide-react';
+
+// Enhanced game configuration
+const GAME_CONFIG = {
+  PLAYER_WIDTH: 10,
+  PLAYER_HEIGHT: 6,
+  ALIEN_WIDTH: 8,
+  ALIEN_HEIGHT: 8,
+  GRID_ROWS: 4,
+  GRID_COLS: 10,
+  BULLET_SPEED: 5,
+  ALIEN_SPEED: 1,
+  INITIAL_LIVES: 3,
+  POINTS_PER_ALIEN: 100,
+  BONUS_POINTS_PER_LEVEL: 500
+};
+
+// Power-up types
+type PowerUpType = 'shield' | 'multishot' | 'rapid-fire';
 
 export default function SpaceInvaders({ isMuted }: { isMuted: boolean }) {
+  // Game state
   const [playerX, setPlayerX] = useState(50);
-  const [bullets, setBullets] = useState<Array<{ x: number; y: number }>>([]);
-  const [aliens, setAliens] = useState<Array<{ x: number; y: number }>>([]);
+  const [bullets, setBullets] = useState<Array<{ x: number; y: number; type?: string }>>([]);
+  const [aliens, setAliens] = useState<Array<{ x: number; y: number; health: number }>>([]);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [level, setLevel] = useState(1);
+  const [lives, setLives] = useState(GAME_CONFIG.INITIAL_LIVES);
+  const [powerUps, setPowerUps] = useState<Array<{ x: number; y: number; type: PowerUpType }>>([]);
+  const [activeShield, setActiveShield] = useState(false);
+  const [multiShotActive, setMultiShotActive] = useState(false);
+  const [rapidFireActive, setRapidFireActive] = useState(false);
 
-  // Initialize aliens
+  // Initialize aliens with health and varied types
   useEffect(() => {
     const newAliens = [];
-    for (let y = 0; y < 3; y++) {
-      for (let x = 0; x < 8; x++) {
-        newAliens.push({ x: x * 10 + 15, y: y * 10 + 10 });
+    const alienTypes = ['basic', 'tough', 'boss'];
+    for (let y = 0; y < GAME_CONFIG.GRID_ROWS; y++) {
+      for (let x = 0; x < GAME_CONFIG.GRID_COLS; x++) {
+        const type = alienTypes[Math.floor(Math.random() * alienTypes.length)];
+        newAliens.push({ 
+          x: x * 10 + 15, 
+          y: y * 10 + 10, 
+          health: type === 'basic' ? 1 : type === 'tough' ? 2 : 3,
+          type 
+        });
       }
     }
     setAliens(newAliens);
   }, [level]);
 
-  // Handle keyboard input
+  // Spawn random power-ups
+  useEffect(() => {
+    if (Math.random() < 0.02) {
+      const powerUpTypes: PowerUpType[] = ['shield', 'multishot', 'rapid-fire'];
+      setPowerUps(prev => [...prev, {
+        x: Math.random() * 90,
+        y: 10,
+        type: powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)]
+      }]);
+    }
+  }, [bullets]);
+
+  // Keyboard and touch controls
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (gameOver) return;
+    
     if (e.key === 'ArrowLeft') setPlayerX(prev => Math.max(10, prev - 5));
     if (e.key === 'ArrowRight') setPlayerX(prev => Math.min(90, prev + 5));
+    
+    // Different shooting mechanics based on power-ups
     if (e.key === ' ') {
-      setBullets(prev => [...prev, { x: playerX, y: 90 }]);
+      if (multiShotActive) {
+        // Multi-shot spreads bullets
+        setBullets(prev => [
+          ...prev, 
+          { x: playerX - 2, y: 90 },
+          { x: playerX, y: 90 },
+          { x: playerX + 2, y: 90 }
+        ]);
+      } else {
+        setBullets(prev => [...prev, { x: playerX, y: 90 }]);
+      }
     }
-  }, [playerX]);
+  }, [playerX, gameOver, multiShotActive]);
 
+  // Game loop with enhanced mechanics
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
-  // Game loop
-  useEffect(() => {
-    if (gameOver || aliens.length === 0) return;
+    if (gameOver) return;
 
     const gameLoop = setInterval(() => {
-      // Move bullets
+      // Move and filter bullets
       setBullets(prev => 
-        prev.map(bullet => ({ ...bullet, y: bullet.y - 5 }))
+        prev.map(bullet => ({ ...bullet, y: bullet.y - GAME_CONFIG.BULLET_SPEED }))
           .filter(bullet => bullet.y > 0)
       );
 
-      // Move aliens
+      // Move power-ups
+      setPowerUps(prev => 
+        prev.map(powerUp => ({ ...powerUp, y: powerUp.y + 1 }))
+          .filter(powerUp => powerUp.y < 100)
+      );
+
+      // Move aliens with more complex pathing
       setAliens(prev => {
         const shouldMoveDown = prev.some(alien => alien.x <= 5 || alien.x >= 95);
         return prev.map(alien => ({
-          x: shouldMoveDown ? alien.x : alien.x + (level % 2 === 0 ? -1 : 1),
+          ...alien,
+          x: shouldMoveDown ? alien.x : alien.x + (level % 2 === 0 ? -GAME_CONFIG.ALIEN_SPEED : GAME_CONFIG.ALIEN_SPEED),
           y: shouldMoveDown ? alien.y + 2 : alien.y
         }));
       });
 
-      // Check bullet-alien collisions
+      // Collision detection with power-ups
+      setPowerUps(powerUps => {
+        return powerUps.filter(powerUp => {
+          // Check if player collected power-up
+          if (
+            Math.abs(powerUp.x - playerX) < 5 && 
+            powerUp.y >= 85 && powerUp.y <= 90
+          ) {
+            switch(powerUp.type) {
+              case 'shield':
+                setActiveShield(true);
+                setTimeout(() => setActiveShield(false), 5000);
+                break;
+              case 'multishot':
+                setMultiShotActive(true);
+                setTimeout(() => setMultiShotActive(false), 5000);
+                break;
+              case 'rapid-fire':
+                setRapidFireActive(true);
+                setTimeout(() => setRapidFireActive(false), 5000);
+                break;
+            }
+            return false;
+          }
+          return true;
+        });
+      });
+
+      // Bullet-alien collision with health system
       setBullets(prev => {
         const newBullets = [...prev];
         setAliens(currentAliens => {
@@ -64,83 +152,148 @@ export default function SpaceInvaders({ isMuted }: { isMuted: boolean }) {
                 Math.pow(bullet.x - alien.x, 2) + Math.pow(bullet.y - alien.y, 2)
               );
               if (distance < 8) {
+                // Reduce alien health
+                alien.health -= 1;
                 newBullets.splice(i, 1);
-                setScore(s => s + 100);
+                
+                if (alien.health <= 0) {
+                  // Different points for different alien types
+                  setScore(s => s + (
+                    alien.type === 'basic' ? 100 : 
+                    alien.type === 'tough' ? 200 : 
+                    300
+                  ));
+                  return false;
+                }
                 return true;
               }
               return false;
             });
-            return !hit;
+            return hit ? alien : !hit;
           });
         });
         return newBullets;
       });
 
-      // Check if aliens reached bottom
-      if (aliens.some(alien => alien.y >= 85)) {
-        setGameOver(true);
-      }
-
-      // Alien bullets (random attacks)
-      if (Math.random() < 0.02) {
+      // Alien bullets and attacks
+      if (Math.random() < 0.02 && aliens.length > 0) {
         const randomAlien = aliens[Math.floor(Math.random() * aliens.length)];
-        setBullets(prev => [...prev, { x: randomAlien.x, y: randomAlien.y + 5 }]);
+        setBullets(prev => [...prev, { x: randomAlien.x, y: randomAlien.y + 5, type: 'alien' }]);
       }
 
-      // Check player hit
+      // Player hit detection with shield
       const playerHit = bullets.some(
-        bullet => bullet.y >= 85 && Math.abs(bullet.x - playerX) < 5
+        bullet => bullet.type === 'alien' && 
+        bullet.y >= 85 && 
+        Math.abs(bullet.x - playerX) < 5
       );
-      if (playerHit) setGameOver(true);
+      
+      if (playerHit) {
+        if (activeShield) {
+          // Shield absorbs one hit
+          setActiveShield(false);
+        } else {
+          // Lose a life
+          setLives(l => {
+            const newLives = l - 1;
+            if (newLives <= 0) {
+              setGameOver(true);
+            }
+            return newLives;
+          });
+        }
+      }
 
       // Level complete
       if (aliens.length === 0) {
-        setLevel(l => l + 1);
+        setLevel(l => {
+          const newLevel = l + 1;
+          // Bonus points for completing level
+          setScore(s => s + GAME_CONFIG.BONUS_POINTS_PER_LEVEL);
+          return newLevel;
+        });
         setBullets([]);
       }
     }, 50);
 
     return () => clearInterval(gameLoop);
-  }, [gameOver, aliens, playerX, level]);
+  }, [gameOver, aliens, playerX, level, activeShield]);
 
+  // Restart game
   const restartGame = () => {
     setGameOver(false);
     setScore(0);
     setLevel(1);
+    setLives(GAME_CONFIG.INITIAL_LIVES);
     setBullets([]);
     setPlayerX(50);
+    setPowerUps([]);
   };
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
-      {/* Score */}
-      <div className="absolute top-4 left-4 text-white text-xl font-bold">
-        Score: {score} | Level: {level}
+      {/* Game Info */}
+      <div className="absolute top-4 left-4 text-white text-xl font-bold flex items-center space-x-4">
+        <div>Score: {score}</div>
+        <div className="flex items-center">
+          {[...Array(lives)].map((_, i) => (
+            <Heart key={i} className="text-red-500 w-6 h-6" />
+          ))}
+        </div>
+        <div>Level: {level}</div>
       </div>
       
-      {/* Player */}
+      {/* Player with power-up indicators */}
       <div 
-        className="absolute bottom-4 w-10 h-6 bg-green-500 transform -translate-x-1/2"
+        className={`absolute bottom-4 w-10 h-6 transform -translate-x-1/2 ${
+          activeShield ? 'bg-blue-500' : 'bg-green-500'
+        }`}
         style={{ left: `${playerX}%` }}
-      />
+      >
+        {activeShield && <Shield className="absolute top-0 left-0 text-white w-full h-full" />}
+      </div>
       
       {/* Bullets */}
       {bullets.map((bullet, i) => (
         <div
           key={i}
-          className="absolute w-2 h-6 bg-yellow-400 transform -translate-x-1/2"
+          className={`absolute w-2 h-6 transform -translate-x-1/2 ${
+            bullet.type === 'alien' ? 'bg-red-400' : 'bg-yellow-400'
+          }`}
           style={{ left: `${bullet.x}%`, top: `${bullet.y}%` }}
         />
       ))}
       
-      {/* Aliens */}
+      {/* Aliens with health visualization */}
       {aliens.map((alien, i) => (
         <div
           key={i}
-          className="absolute w-8 h-8 bg-red-500 transform -translate-x-1/2 -translate-y-1/2"
+          className={`absolute w-8 h-8 transform -translate-x-1/2 -translate-y-1/2 ${
+            alien.type === 'basic' ? 'bg-red-500' : 
+            alien.type === 'tough' ? 'bg-orange-500' : 
+            'bg-purple-600'
+          }`}
           style={{ left: `${alien.x}%`, top: `${alien.y}%` }}
         >
-          <div className="absolute w-6 h-2 bg-red-700 top-1 left-1"></div>
+          <div className="absolute w-6 h-2 bg-red-700 top-1 left-1">
+            {/* Health indicator */}
+            {alien.health > 1 && (
+              <div className="text-white text-xs text-center">{alien.health}</div>
+            )}
+          </div>
+        </div>
+      ))}
+      
+      {/* Power-ups */}
+      {powerUps.map((powerUp, i) => (
+        <div
+          key={i}
+          className="absolute w-6 h-6 transform -translate-x-1/2 -translate-y-1/2"
+          style={{ left: `${powerUp.x}%`, top: `${powerUp.y}%` }}
+        >
+          {powerUp.type === 'shield' && <Shield className="text-blue-500" />}
+          {powerUp.type === 'multishot' && <Rocket className="text-green-500" />}
+          {powerUp.type === 'rapid-fire' && <Alien className="text-purple-500" />}
         </div>
       ))}
       
@@ -150,12 +303,12 @@ export default function SpaceInvaders({ isMuted }: { isMuted: boolean }) {
           <h2 className="text-4xl font-bold text-white mb-4">Game Over!</h2>
           <p className="text-2xl text-white mb-6">Score: {score}</p>
           <motion.button
-            className="bg-green-500 text-white px-6 py-3 rounded-lg font-bold"
+            className="bg-green-500 text-white px-6 py-3 rounded-lg font-bold flex items-center"
             onClick={restartGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Play Again
+            <Trophy className="mr-2" /> Play Again
           </motion.button>
         </div>
       )}
@@ -166,12 +319,12 @@ export default function SpaceInvaders({ isMuted }: { isMuted: boolean }) {
           <h2 className="text-4xl font-bold text-white mb-4">Level Complete!</h2>
           <p className="text-2xl text-white mb-6">Score: {score}</p>
           <motion.button
-            className="bg-green-500 text-white px-6 py-3 rounded-lg font-bold"
-            onClick={() => setAliens([])} // This will trigger the useEffect to create new aliens
+            className="bg-green-500 text-white px-6 py-3 rounded-lg font-bold flex items-center"
+            onClick={() => setAliens([])}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Next Level
+            <Trophy className="mr-2" /> Next Level
           </motion.button>
         </div>
       )}
