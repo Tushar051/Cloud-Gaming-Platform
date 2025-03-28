@@ -142,6 +142,8 @@ export default function SpaceInvaders({ isMuted }: { isMuted: boolean }) {
         });
       });
 
+      
+
       // Bullet-alien collision with health system
       setBullets(prev => {
         const newBullets = [...prev];
