@@ -38,13 +38,44 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
     return parseInt(localStorage.getItem('tetrisHighScore') || '0');
   });
 
-  
+  // Defensive collision check with improved safety
+  const checkCollision = useCallback((piece: { shape: number[][]; x: number; y: number }) => {
+    // Ensure board and piece exist and are valid
+    if (!board || !piece || !piece.shape) return true;
 
-  // Initialize board
+    for (let y = 0; y < piece.shape.length; y++) {
+      for (let x = 0; x < piece.shape[y].length; x++) {
+        if (piece.shape[y][x] !== 0) {
+          const boardX = piece.x + x;
+          const boardY = piece.y + y;
+          
+          // Enhanced boundary and collision checks
+          if (
+            boardX < 0 ||
+            boardX >= BOARD_WIDTH ||
+            boardY >= BOARD_HEIGHT ||
+            (boardY >= 0 && 
+             boardY < board.length && 
+             boardX < board[boardY].length && 
+             board[boardY][boardX] !== 0)
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }, [board]);
+
+  // Initialize board and first piece
   useEffect(() => {
-    const newBoard = Array(BOARD_HEIGHT).fill(0).map(() => Array(BOARD_WIDTH).fill(0));
-    setBoard(newBoard);
-    spawnPiece();
+    const initializeBoard = () => {
+      const newBoard = Array(BOARD_HEIGHT).fill(0).map(() => Array(BOARD_WIDTH).fill(0));
+      setBoard(newBoard);
+      spawnPiece();
+    };
+
+    initializeBoard();
   }, []);
 
   // Level and speed management
@@ -52,9 +83,8 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
     setLevel(Math.floor(score / 1000) + 1);
   }, [score]);
 
-  // Spawn a new piece
-  const spawnPiece = () => {
-    // Use next piece or generate a new one if no next piece exists
+  // Spawn a new piece with improved randomization
+  const spawnPiece = useCallback(() => {
     const randomIndex = Math.floor(Math.random() * SHAPES.length);
     const randomShape = SHAPES[randomIndex];
     const randomColor = SHAPE_COLORS[randomIndex];
@@ -66,7 +96,7 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
       color: randomColor
     };
 
-    // If next piece exists, use it as current piece
+    // Use next piece if it exists, otherwise use new piece
     if (nextPiece) {
       setCurrentPiece({
         ...nextPiece,
@@ -84,54 +114,33 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
       color: SHAPE_COLORS[nextRandomIndex]
     });
     
-    // Check if game over (new piece collides immediately)
+    // Check for immediate game over
     if (checkCollision(newPiece)) {
       endGame();
     }
-  };
+  }, [nextPiece, checkCollision]);
 
   // End game and update high score
-  const endGame = () => {
+  const endGame = useCallback(() => {
     setGameOver(true);
     if (score > highScore) {
-      setHighScore(score);
-      localStorage.setItem('tetrisHighScore', score.toString());
+      const newHighScore = score;
+      setHighScore(newHighScore);
+      localStorage.setItem('tetrisHighScore', newHighScore.toString());
     }
-  };
-
-  // Check for collisions
-  const checkCollision = (piece: { shape: number[][]; x: number; y: number }) => {
-    for (let y = 0; y < piece.shape.length; y++) {
-      for (let x = 0; x < piece.shape[y].length; x++) {
-        if (piece.shape[y][x] !== 0) {
-          const boardX = piece.x + x;
-          const boardY = piece.y + y;
-          
-          if (
-            boardX < 0 ||
-            boardX >= BOARD_WIDTH ||
-            boardY >= BOARD_HEIGHT ||
-            (boardY >= 0 && board[boardY][boardX] !== 0)
-          ) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  };
+  }, [score, highScore]);
 
   // Merge piece into board
-  const mergePiece = () => {
+  const mergePiece = useCallback(() => {
     if (!currentPiece) return;
     
-    const newBoard = [...board];
+    const newBoard = board.map(row => [...row]);
     for (let y = 0; y < currentPiece.shape.length; y++) {
       for (let x = 0; x < currentPiece.shape[y].length; x++) {
         if (currentPiece.shape[y][x] !== 0) {
           const boardY = currentPiece.y + y;
           const boardX = currentPiece.x + x;
-          if (boardY >= 0) {
+          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
             newBoard[boardY][boardX] = 1;
           }
         }
@@ -140,12 +149,12 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
     setBoard(newBoard);
     checkLines(newBoard);
     spawnPiece();
-  };
+  }, [currentPiece, board, spawnPiece]);
 
   // Check for completed lines
-  const checkLines = (boardToCheck: number[][]) => {
+  const checkLines = useCallback((boardToCheck: number[][]) => {
     let linesCleared = 0;
-    const newBoard = [...boardToCheck];
+    const newBoard = boardToCheck.map(row => [...row]);
     
     for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
       if (newBoard[y].every(cell => cell !== 0)) {
@@ -157,12 +166,12 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
     }
     
     if (linesCleared > 0) {
-      // Scoring system with different points for multiple line clears
+      // Enhanced scoring system
       const scoreMultiplier = [100, 300, 500, 800];
-      const baseScore = scoreMultiplier[linesCleared - 1] * level;
+      const baseScore = scoreMultiplier[Math.min(linesCleared - 1, 3)] * level;
       setScore(prev => prev + baseScore);
     }
-  };
+  }, [level]);
 
   // Handle keyboard input
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -188,7 +197,7 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
         }
         break;
       case 'ArrowUp':
-        // Rotate
+        // Rotation logic
         const rotated = currentPiece.shape[0].map((_, i) => 
           currentPiece.shape.map(row => row[i]).reverse()
         );
@@ -207,21 +216,20 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
         setCurrentPiece(newPiece);
         mergePiece();
         break;
-      default:
-        break;
     }
-  }, [currentPiece, gameOver, isPaused]);
+  }, [currentPiece, gameOver, isPaused, checkCollision, mergePiece]);
 
+  // Add keyboard event listener
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Game loop - move piece down automatically
+  // Game loop - automatic piece movement
   useEffect(() => {
     if (gameOver || isPaused || !currentPiece) return;
 
-    // Decrease interval based on level (faster at higher levels)
+    // Dynamic game speed based on level
     const gameSpeed = Math.max(100, 500 - (level - 1) * 50);
 
     const gameLoop = setInterval(() => {
@@ -234,8 +242,9 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
     }, gameSpeed);
 
     return () => clearInterval(gameLoop);
-  }, [currentPiece, gameOver, isPaused, level]);
+  }, [currentPiece, gameOver, isPaused, level, checkCollision, mergePiece]);
 
+  // Restart game
   const restartGame = () => {
     const newBoard = Array(BOARD_HEIGHT).fill(0).map(() => Array(BOARD_WIDTH).fill(0));
     setBoard(newBoard);
@@ -247,7 +256,7 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
   };
 
   // Render the board with current piece
-  const renderBoard = () => {
+  const renderBoard = useCallback(() => {
     const displayBoard = board.map(row => [...row]);
     
     if (currentPiece) {
@@ -265,7 +274,7 @@ export default function Tetris({ isMuted }: { isMuted: boolean }) {
     }
     
     return displayBoard;
-  };
+  }, [board, currentPiece]);
 
   return (
     <div className="flex flex-col items-center justify-center w-full h-full bg-gray-900">
