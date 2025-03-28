@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Volume2, VolumeX, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 export default function FlappyBird() {
   // Game state
@@ -12,12 +12,6 @@ export default function FlappyBird() {
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   
-  // Sound and audio state
-  const [isMuted, setIsMuted] = useState(false);
-  const jumpSoundRef = useRef<HTMLAudioElement>(null);
-  const hitSoundRef = useRef<HTMLAudioElement>(null);
-  const scoreSoundRef = useRef<HTMLAudioElement>(null);
-
   // Difficulty settings
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const difficultySettings = {
@@ -35,14 +29,8 @@ export default function FlappyBird() {
       
       // Jump logic
       setVelocity(-5);
-      
-      // Play jump sound
-      if (!isMuted && jumpSoundRef.current) {
-        jumpSoundRef.current.currentTime = 0;
-        jumpSoundRef.current.play();
-      }
     }
-  }, [gameStarted, isMuted]);
+  }, [gameStarted]);
 
   // Add touch/mobile support
   const handleTouchStart = useCallback(() => {
@@ -51,13 +39,7 @@ export default function FlappyBird() {
     }
     
     setVelocity(-5);
-    
-    // Play jump sound
-    if (!isMuted && jumpSoundRef.current) {
-      jumpSoundRef.current.currentTime = 0;
-      jumpSoundRef.current.play();
-    }
-  }, [gameStarted, isMuted]);
+  }, [gameStarted]);
 
   // Event listeners
   useEffect(() => {
@@ -101,12 +83,6 @@ export default function FlappyBird() {
           const newScore = score + 1;
           setScore(newScore);
           
-          // Play score sound
-          if (!isMuted && scoreSoundRef.current) {
-            scoreSoundRef.current.currentTime = 0;
-            scoreSoundRef.current.play();
-          }
-          
           // Update high score
           setHighScore(prev => Math.max(prev, newScore));
         }
@@ -122,18 +98,12 @@ export default function FlappyBird() {
       });
       
       if (hitTopOrBottom || hitPipe) {
-        // Play hit sound
-        if (!isMuted && hitSoundRef.current) {
-          hitSoundRef.current.currentTime = 0;
-          hitSoundRef.current.play();
-        }
-        
         setGameOver(true);
       }
     }, 20);
 
     return () => clearInterval(gameLoop);
-  }, [gameStarted, gameOver, birdY, velocity, pipes, score, difficulty, isMuted]);
+  }, [gameStarted, gameOver, birdY, velocity, pipes, score, difficulty]);
 
   const restartGame = () => {
     setBirdY(50);
@@ -149,13 +119,8 @@ export default function FlappyBird() {
       className="relative w-full h-full bg-sky-400 overflow-hidden touch-none select-none"
       onTouchStart={handleTouchStart}
     >
-      {/* Sound Effects */}
-      <audio ref={jumpSoundRef} src="/jump.mp3" />
-      <audio ref={hitSoundRef} src="/hit.mp3" />
-      <audio ref={scoreSoundRef} src="/score.mp3" />
-      
       {/* Controls */}
-      <div className="absolute top-4 left-4 flex items-center space-x-4">
+      <div className="absolute top-4 left-4">
         {/* Difficulty Selector */}
         <select 
           value={difficulty} 
@@ -167,14 +132,6 @@ export default function FlappyBird() {
           <option value="medium">Medium</option>
           <option value="hard">Hard</option>
         </select>
-
-        {/* Mute Toggle */}
-        <button 
-          onClick={() => setIsMuted(!isMuted)}
-          className="text-white"
-        >
-          {isMuted ? <VolumeX /> : <Volume2 />}
-        </button>
       </div>
       
       {/* Scores */}
