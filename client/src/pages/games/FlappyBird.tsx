@@ -1,24 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw } from 'lucide-react';
 
-export default function FlappyBird() {
-  // Game state
+export default function FlappyBird({ isMuted }: { isMuted: boolean }) {
   const [birdY, setBirdY] = useState(50);
   const [velocity, setVelocity] = useState(0);
   const [pipes, setPipes] = useState<Array<{ x: number; topHeight: number }>>([]);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  
-  // Difficulty settings
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
-  const difficultySettings = {
-    easy: { pipeSpeed: 0.8, gravity: 0.2, gapSize: 35 },
-    medium: { pipeSpeed: 1, gravity: 0.3, gapSize: 30 },
-    hard: { pipeSpeed: 1.2, gravity: 0.4, gapSize: 25 }
-  };
 
   // Handle keyboard input
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -26,41 +15,22 @@ export default function FlappyBird() {
       if (!gameStarted) {
         setGameStarted(true);
       }
-      
-      // Jump logic
       setVelocity(-5);
     }
   }, [gameStarted]);
 
-  // Add touch/mobile support
-  const handleTouchStart = useCallback(() => {
-    if (!gameStarted) {
-      setGameStarted(true);
-    }
-    
-    setVelocity(-5);
-  }, [gameStarted]);
-
-  // Event listeners
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('touchstart', handleTouchStart);
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [handleKeyDown, handleTouchStart]);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   // Game loop
   useEffect(() => {
     if (!gameStarted || gameOver) return;
 
-    const { pipeSpeed, gravity, gapSize } = difficultySettings[difficulty];
-
     const gameLoop = setInterval(() => {
       // Bird physics
-      setVelocity(v => v + gravity);
+      setVelocity(v => v + 0.3);
       setBirdY(y => y + velocity);
 
       // Generate pipes
@@ -71,7 +41,7 @@ export default function FlappyBird() {
 
       // Move pipes
       setPipes(prev => 
-        prev.map(pipe => ({ ...pipe, x: pipe.x - pipeSpeed }))
+        prev.map(pipe => ({ ...pipe, x: pipe.x - 1 }))
           .filter(pipe => pipe.x > -10)
       );
 
@@ -80,11 +50,7 @@ export default function FlappyBird() {
         const newPipes = [...prev];
         const passedPipe = newPipes.find(pipe => pipe.x < 20 && pipe.x > 18);
         if (passedPipe) {
-          const newScore = score + 1;
-          setScore(newScore);
-          
-          // Update high score
-          setHighScore(prev => Math.max(prev, newScore));
+          setScore(s => s + 1);
         }
         return newPipes;
       });
@@ -93,7 +59,7 @@ export default function FlappyBird() {
       const hitTopOrBottom = birdY < 0 || birdY > 100;
       const hitPipe = pipes.some(pipe => {
         const inPipeRange = pipe.x < 25 && pipe.x > 0;
-        const inPipeGap = birdY > pipe.topHeight && birdY < pipe.topHeight + gapSize;
+        const inPipeGap = birdY > pipe.topHeight && birdY < pipe.topHeight + 30;
         return inPipeRange && !inPipeGap;
       });
       
@@ -103,7 +69,7 @@ export default function FlappyBird() {
     }, 20);
 
     return () => clearInterval(gameLoop);
-  }, [gameStarted, gameOver, birdY, velocity, pipes, score, difficulty]);
+  }, [gameStarted, gameOver, birdY, velocity, pipes]);
 
   const restartGame = () => {
     setBirdY(50);
@@ -115,29 +81,10 @@ export default function FlappyBird() {
   };
 
   return (
-    <div 
-      className="relative w-full h-full bg-sky-400 overflow-hidden touch-none select-none"
-      onTouchStart={handleTouchStart}
-    >
-      {/* Controls */}
-      <div className="absolute top-4 left-4">
-        {/* Difficulty Selector */}
-        <select 
-          value={difficulty} 
-          onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
-          className="bg-white/30 text-white rounded px-2 py-1"
-          disabled={gameStarted && !gameOver}
-        >
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
-      </div>
-      
-      {/* Scores */}
-      <div className="absolute top-4 right-4 text-white text-xl font-bold">
-        <div>Score: {score}</div>
-        <div>High Score: {highScore}</div>
+    <div className="relative w-full h-full bg-sky-400 overflow-hidden">
+      {/* Score */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-xl font-bold">
+        Score: {score}
       </div>
       
       {/* Bird */}
@@ -166,9 +113,9 @@ export default function FlappyBird() {
             className="absolute bg-green-500 border-r-4 border-l-4 border-green-700"
             style={{ 
               left: `${pipe.x}%`, 
-              top: `${pipe.topHeight + difficultySettings[difficulty].gapSize}%`, 
+              top: `${pipe.topHeight + 30}%`, 
               width: '40px', 
-              height: `${100 - pipe.topHeight - difficultySettings[difficulty].gapSize}%` 
+              height: `${100 - pipe.topHeight - 30}%` 
             }}
           />
         </div>
@@ -181,19 +128,7 @@ export default function FlappyBird() {
       {!gameStarted && !gameOver && (
         <div className="absolute inset-0 bg-black bg-opacity-30 flex flex-col items-center justify-center">
           <h2 className="text-4xl font-bold text-white mb-4">Flappy Bird</h2>
-          <p className="text-xl text-white mb-6">Press Space or Tap to Start</p>
-          <div className="text-white text-center mb-4">
-            <p>Select Difficulty Before Starting</p>
-            <select 
-              value={difficulty} 
-              onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
-              className="bg-white/30 text-white rounded px-2 py-1 mt-2"
-            >
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
+          <p className="text-xl text-white mb-6">Press Space to start</p>
         </div>
       )}
       
@@ -201,15 +136,14 @@ export default function FlappyBird() {
       {gameOver && (
         <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center">
           <h2 className="text-4xl font-bold text-white mb-4">Game Over!</h2>
-          <p className="text-2xl text-white mb-2">Score: {score}</p>
-          <p className="text-xl text-white mb-6">High Score: {highScore}</p>
+          <p className="text-2xl text-white mb-6">Score: {score}</p>
           <motion.button
-            className="bg-yellow-500 text-white px-6 py-3 rounded-lg font-bold flex items-center"
+            className="bg-yellow-500 text-white px-6 py-3 rounded-lg font-bold"
             onClick={restartGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <RefreshCw className="mr-2" /> Play Again
+            Play Again
           </motion.button>
         </div>
       )}

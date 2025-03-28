@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { Alien } from 'lucide-react';
 
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;

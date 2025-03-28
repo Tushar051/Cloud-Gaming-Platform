@@ -10,6 +10,7 @@ import FlappyBird from './FlappyBird';
 import Tetris from './Tetris';
 import Game2048 from './Game2048';
 
+
 // GameLayout handles the routing for individual games
 export default function GameLayout() {
   const [_, params] = useRoute('/games/:gameId*');
@@ -17,7 +18,6 @@ export default function GameLayout() {
 
   // Control panel state
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
 
   // Handle fullscreen toggle
   const toggleFullscreen = () => {
@@ -32,18 +32,28 @@ export default function GameLayout() {
     }
   };
 
-  // Handle mute toggle
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    // Add logic to mute/unmute game sounds
-  };
-
   // Clean up fullscreen when component unmounts
   useEffect(() => {
     return () => {
       if (document.fullscreenElement) {
         document.exitFullscreen();
       }
+    };
+  }, []);
+
+  // Add event listener for arrow key movement
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Prevent default scrolling behavior
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -82,25 +92,25 @@ export default function GameLayout() {
     // Return game based on ID
     switch (gameId) {
       case 'snake':
-        return <Snake isMuted={isMuted} />;
+        return <Snake />;
       case 'subway-runner':
-        return <SubwayRunner isMuted={isMuted} />;
+        return <SubwayRunner />;
       case 'pixel-racer':
-        return <PixelRacer isMuted={isMuted} />;
+        return <PixelRacer />;
       case 'maze-muncher':
-        return <MazeMuncher isMuted={isMuted} />;
+        return <MazeMuncher />;
       case 'space-invaders':
-        return <SpaceInvaders isMuted={isMuted} />;
+        return <SpaceInvaders />;
       case 'flappy-bird':
-        return <FlappyBird isMuted={isMuted} />;
+        return <FlappyBird />;
       case 'tetris':
-        return <Tetris isMuted={isMuted} />;
+        return <Tetris />;
       case '2048':
-        return <Game2048 isMuted={isMuted} />;
+        return <Game2048 />;
         
       // Add more cases for other games as you implement them
       // case 'new-game':
-      //   return <NewGame isMuted={isMuted} />;
+      //   return <NewGame />;
         
       default:
         return (
@@ -137,14 +147,6 @@ export default function GameLayout() {
           {formatGameTitle(gameId)}
         </div>
         <div className="flex gap-4">
-          <motion.button
-            className={`text-white ${isMuted ? 'text-red-500' : 'text-white'} hover:text-primary transition-colors`}
-            onClick={toggleMute}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <i className={`fas ${isMuted ? 'fa-volume-mute' : 'fa-volume-up'} text-xl`}></i>
-          </motion.button>
           <motion.button
             className="text-white hover:text-primary transition-colors"
             onClick={toggleFullscreen}

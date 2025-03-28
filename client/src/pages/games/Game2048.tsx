@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, Volume2, VolumeX } from 'lucide-react';
 
+
 const BOARD_SIZE = 4;
 
 export default function Game2048() {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
+
 export default function PixelRacer({ isMuted }: { isMuted: boolean }) {
   const [score, setScore] = useState(0);
   const [playerX, setPlayerX] = useState(50);
