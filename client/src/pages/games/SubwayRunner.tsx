@@ -9,6 +9,7 @@ type Obstacle = {
   type: 'normal' | 'power-up' | 'enemy';
 };
 
+
 type GameDifficulty = 'easy' | 'medium' | 'hard';
 
 export default function SubwayRunner({ isMuted }: { isMuted: boolean }) {
@@ -57,7 +58,7 @@ export default function SubwayRunner({ isMuted }: { isMuted: boolean }) {
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (gameState.gameOver) return;
     
-    const containerWidth = e.currentTarget.clientWidth;
+    const containerWidth = (e.currentTarget as HTMLElement).clientWidth;
     const touchX = e.touches[0].clientX;
     const laneWidth = containerWidth / 3;
 
