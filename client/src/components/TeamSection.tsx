@@ -23,7 +23,7 @@ const teamMembers = [
     color: "text-accent"
   },
   {
-    name: "Vivel",
+    name: "Vivek",
     role: "AI Engineer",
     bio: "Designs intelligent systems that bring games to life with adaptive AI behaviors and realistic NPC interactions.",
     imageUrl: "https://images.unsplash.com/photo-1542190891-2093d38760f2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&h=1100&q=80",
